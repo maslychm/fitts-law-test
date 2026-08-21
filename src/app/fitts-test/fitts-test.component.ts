@@ -1,6 +1,5 @@
 import { AfterViewInit, Component, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, signal } from '@angular/core';
 import * as d3 from 'd3';
-import * as _ from 'lodash-es';
 import { AppService } from '../app.service';
 declare var DocumentTouch: any;
 
@@ -86,6 +85,12 @@ export enum Clock {
     antiClockwise = 'Anti-Clockwise'
 }
 
+function mean(values: number[]): number {
+    return values.length
+        ? values.reduce((total, value) => total + value, 0) / values.length
+        : Number.NaN;
+}
+
 export type TestScreen =
     'practice-intro' |
     'countdown' |
@@ -110,23 +115,14 @@ export class Config {
 export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     @Input() sessionType: 'formal' | 'demo' = 'formal';
     @Output() viewResults = new EventEmitter<void>();
-    title = 'fitts-law-tester';
     workAreaId = 'work-area' + Math.floor(Math.random() * 10e6);
     svgAreaId = 'svg-work-area' + Math.floor(Math.random() * 10e6);
-    oTesterId = 'o-test' + Math.floor(Math.random() * 10e6);
     currentRadius = 50;
-    currentDistance = null;
     baseRadius = null;
-    maxRadius = null;
-    minRadius = null;
     svgElem;
     dim;
-    workingDim;
-    pad = 60;
     pageCenter;
-    fittRadiusCircle: d3.Selection<any, any, any, any> = null;
     fittCircles: Array<d3.Selection<any, any, any, any>> = [];
-    showFittRadiusCircle = false;
     color = '#3498db';
     testInProgress = false;
     currentIndexActive = null;
@@ -140,25 +136,14 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     practiceDataSet: Array<DataItem | any> = [];
     overallDataSet: Array<DataItem | any> = [];
     overallAverages: Array<DataAverage | any> = [];
-    countdownTickCount = -1;
     currentTestCount = -1;
     maxTicks = 3;
     countdownTick = signal(this.maxTicks);
     countdownInterval: number | null = null;
     usesTouchEvents = false;
     userInfo = null;
-    desktopCircleRadiusMeta = [0.25, 1];
-    desktopDimensionsMeta = [8, 10];
-    phoneCircleRadiusMeta = [0.125, 0.33];
-    phoneDimensionsMeta = [3, 5];
     maxTests = 0;
     dimIndex = 0;
-    desktopCircleRadiusOptions = this.desktopCircleRadiusMeta.map(r => this.appService.getPixels(r));
-    phoneCircleRadiusOptions = this.phoneCircleRadiusMeta.map(r => this.appService.getPixels(r));
-    desktopDimensionsOptions = this.desktopDimensionsMeta.map(r => this.appService.getPixels(r));
-    phoneDimensionsOptions = this.phoneDimensionsMeta.map(r => this.appService.getPixels(r));
-    // desktopConfigs = [[0.25, 8.5], [0.25, 10.5], [1, 10], [1, 12]];
-    // phoneConfigs = [[0.25, 3.50], [0.25, 4.50], [0.50, 3.5], [0.50, 5]];
     desktopConfigs = [
         [0.25, 3.50], [0.25, 4.50], [0.25, 8.5], [0.25, 10.5],
         [0.50, 4], [0.50, 5], [0.5, 9], [0.5, 11],
@@ -179,8 +164,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     constructor(private appService: AppService) { }
     ngAfterViewInit() {
         this.dim = this.getSquareDimension();
-        this.maxRadius = this.dim / 6;
-        this.minRadius = this.getMinRadius();
         this.processCurrentRadius();
         this.checkDimensions();
     }
@@ -268,8 +251,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         this.screen.set('countdown');
         this.countdownTick.set(this.maxTicks);
         this.pickRadius();
-        this.layoutCurrentRadiusBox();
-        this.layourtCurrentCircles();
+        this.layoutCurrentCircles();
         this.startCountdown();
     }
     processCurrentRadius() {
@@ -279,8 +261,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         const height = this.dim;
         d3.select(this.svgElem).attr('width', width);
         d3.select(this.svgElem).attr('height', height);
-        this.layoutCurrentRadiusBox();
-        this.layourtCurrentCircles();
+        this.layoutCurrentCircles();
     }
     pickRadius() {
         if (this.isPracticeRun) {
@@ -330,34 +311,11 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         }
         return works;
     }
-    layoutCurrentRadiusBox() {
-        if (this.fittRadiusCircle) {
-            (this.fittRadiusCircle as d3.Selection<any, any, any, any>).remove();
-        }
-        if (this.showFittRadiusCircle) {
-            this.fittRadiusCircle = d3.select(this.svgElem)
-                .append('circle')
-                .attr('class', 'fitt-radius-circle')
-                .attr('cx', this.pageCenter.x)
-                .attr('cy', this.pageCenter.y)
-                .attr('r', this.baseRadius)
-                .attr('fill', '#000')
-                .attr('stroke', '#d0d0d0')
-                .attr('fill', 'none')
-                .attr('stroke-width', '1px');
-        }
-    }
-    getDistance(a: Coordinate, b: Coordinate) {
-        const xDiff = a.x - b.x;
-        const yDiff = a.y - b.y;
-        return Math.sqrt(((xDiff * xDiff) + (yDiff * yDiff)));
-    }
-    layourtCurrentCircles() {
+    layoutCurrentCircles() {
         this.fittCircles.forEach(c => (c as d3.Selection<any, any, any, any>).remove());
         this.fittCircles = [];
         d3.select('.fitt-circle').remove();
         const circleCoordinates = this.getCurrentCircleCoordinates();
-        this.currentDistance = this.getDistance(circleCoordinates[0], circleCoordinates[1]);
         circleCoordinates.forEach((c, i) => {
             const circle = d3.select(this.svgElem)
                 .append('circle')
@@ -429,10 +387,10 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         const horizontalMisses = missTicks.filter(t => t.direction === Direction.Horizontal);
         const otherHits = hitTicks.filter(t => t.direction === Direction.Other);
         const otherMisses = missTicks.filter(t => t.direction === Direction.Other);
-        average.averageTicks = _.mean(hitTicks.map(t => t.ticks));
-        average.averageVerticalTicks = _.mean(verticalHits.map(t => t.ticks));
-        average.averageHorizontalTicks = _.mean(horizontalHits.map(t => t.ticks));
-        average.averageOtherTicks = _.mean(otherHits.map(t => t.ticks));
+        average.averageTicks = mean(hitTicks.map(t => t.ticks));
+        average.averageVerticalTicks = mean(verticalHits.map(t => t.ticks));
+        average.averageHorizontalTicks = mean(horizontalHits.map(t => t.ticks));
+        average.averageOtherTicks = mean(otherHits.map(t => t.ticks));
         average.hits = hitTicks.length;
         average.misses = missTicks.length;
         average.verticalHits = verticalHits.length;
@@ -486,10 +444,10 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         const horizontalMisses = missTicks.filter(t => t.direction === Direction.Horizontal);
         const otherHits = hitTicks.filter(t => t.direction === Direction.Other);
         const otherMisses = missTicks.filter(t => t.direction === Direction.Other);
-        average.averageTicks = _.mean(hitTicks.map(t => t.ticks));
-        average.averageVerticalTicks = _.mean(verticalHits.map(t => t.ticks));
-        average.averageHorizontalTicks = _.mean(horizontalHits.map(t => t.ticks));
-        average.averageOtherTicks = _.mean(otherHits.map(t => t.ticks));
+        average.averageTicks = mean(hitTicks.map(t => t.ticks));
+        average.averageVerticalTicks = mean(verticalHits.map(t => t.ticks));
+        average.averageHorizontalTicks = mean(horizontalHits.map(t => t.ticks));
+        average.averageOtherTicks = mean(otherHits.map(t => t.ticks));
         average.hits = hitTicks.length;
         average.misses = missTicks.length;
         average.verticalHits = verticalHits.length;
@@ -639,14 +597,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
             dim = window.innerHeight - 120;
         }
         return dim;
-    }
-    getMinRadius() {
-        const elem = document.getElementById(this.oTesterId);
-        if (elem) {
-            const props = elem.getBoundingClientRect();
-            return Math.min(props.height, props.width);
-        }
-        return 1;
     }
     toRadians(angle) {
         return angle * (Math.PI / 180);

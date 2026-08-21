@@ -3,14 +3,14 @@ import {platformBrowserDynamic} from '@angular/platform-browser-dynamic';
 
 import {AppModule} from './app/app.module';
 import {environment} from './environments/environment';
-import {redirectToRoot} from './root-redirect';
 
 if (environment.production) {
   enableProdMode();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (redirectToRoot()) {
+  if (window.location.pathname !== '/' || window.location.search || window.location.hash) {
+    window.location.replace('/');
     return;
   }
   platformBrowserDynamic().bootstrapModule(AppModule);

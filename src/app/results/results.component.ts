@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { AppService } from '../app.service';
-import * as _ from 'lodash-es';
 
 const labelMaps = {
     'type': 'Participant Type',
@@ -46,8 +45,8 @@ export class ResultsComponent implements OnInit {
             }
         });
         const userKeys = ['name', 'alias', 'type', 'device', 'deviceDetails', 'experience', 'deviceDiagonal'];
-        this.userInfoPairs = userAverageData.filter(pair => _.indexOf(userKeys, pair.key) !== -1);
-        this.userAveragePairs = userAverageData.filter(pair => _.indexOf(userKeys, pair.key) === -1);
+        this.userInfoPairs = userAverageData.filter(pair => userKeys.includes(pair.key));
+        this.userAveragePairs = userAverageData.filter(pair => !userKeys.includes(pair.key));
 
         this.runAverages.forEach(run => {
             const userRunKeys = Object.keys(run);
@@ -69,7 +68,7 @@ export class ResultsComponent implements OnInit {
                     label: labelMaps[key] ? labelMaps[key] : this.getLabel(key)
                 }
             });
-            const runData = userRunData.filter(pair => _.indexOf(userKeys, pair.key) === -1);
+            const runData = userRunData.filter(pair => !userKeys.includes(pair.key));
             this.runInfoPairs.push(runData);
         })
     }

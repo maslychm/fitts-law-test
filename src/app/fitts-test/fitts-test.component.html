@@ -3,36 +3,37 @@
 </div>
 
 <span class="o-tester" [attr.id]="oTesterId">o</span>
-<div class="overlay" *ngIf="showModal">
+<div class="overlay" *ngIf="screen() !== 'running'">
 
-    <div class="practice-run-modal" *ngIf="showPracticeModal">
+    <div class="practice-run-modal" *ngIf="screen() === 'practice-intro'">
         <h2>You must do a practice run first</h2>
         <button class="btn-main primary" (click)="beginPractice()">Begin Practice</button>
     </div>
 
-    <div class="countdown-modal" *ngIf="showCountdownModal">
+    <div class="countdown-modal" *ngIf="screen() === 'countdown'">
         <h2>Test begins in </h2>
-        <label class="count">{{countdownTick}}</label>
+        <label class="count">{{countdownTick()}}</label>
         <p>seconds</p>
     </div>
 
-    <ng-container *ngIf="showTestCompleteModal">
+    <ng-container *ngIf="screen() === 'run-complete'">
         <div class="practice-run-modal">
             <h2>Test is complete</h2>
             <button class="btn-main primary" (click)="nextStepInTest()">Next</button>
         </div>
     </ng-container>
 
-    <div class="practice-run-modal" *ngIf="showActualTestModal">
+    <div class="practice-run-modal" *ngIf="screen() === 'run-intro'">
         <h2>Lets start with actual runs</h2>
         <label class="count">{{currentTestCount}} / {{maxTests}}</label>
         <p>RUN</p>
         <button class="btn-main primary" (click)="startTest()">Start</button>
     </div>
 
-    <ng-container *ngIf="showAllDoneModal">
+    <ng-container *ngIf="screen() === 'session-complete'">
         <div class="practice-run-modal">
             <h2>Thanks for taking the test !</h2>
+            <p class="save-status" [class.error]="saveStatus() === 'error'" aria-live="polite">{{saveMessage()}}</p>
             <button class="btn-main primary" target="_blank" [routerLink]="['/results']">View Summary</button>
             <button class="btn-main" *ngIf="!isMobile" (click)="downloadData()">Download JSON Data</button>
             <button class="btn-main" (click)="downloadCSVData()">Download CSV Data</button>

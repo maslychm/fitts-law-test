@@ -8,27 +8,26 @@ import { AppRoutingModule } from './app.routing';
 import { FittsTestComponent } from './fitts-test/fitts-test.component';
 import { InfoComponent } from './info/info.component';
 import { AppService } from './app.service';
-import { AuthGuard } from './auth.guard';
+import { AuthGuard, ResultsGuard } from './auth.guard';
 import { ResultsComponent } from './results/results.component';
-import { DemoComponent } from './demo/demo.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     HomeComponent,
     FittsTestComponent,
-    DemoComponent,
     InfoComponent,
     ResultsComponent
   ],
   imports: [
-    BrowserModule.withServerTransition({ appId: 'my-app' }),
+    BrowserModule,
     AppRoutingModule,
     FormsModule
   ],
   providers: [
     AppService,
-    AuthGuard
+    AuthGuard,
+    ResultsGuard
   ],
   bootstrap: [AppComponent]
 })

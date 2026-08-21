@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AppService } from '../app.service';
-import * as _ from 'lodash';
+import * as _ from 'lodash-es';
 
 const labelMaps = {
     'type': 'Participant Type',
@@ -8,6 +8,7 @@ const labelMaps = {
 };
 
 @Component({
+    standalone: false,
     selector: 'app-results',
     templateUrl: 'results.component.html',
     styleUrls: ['./results.component.scss']

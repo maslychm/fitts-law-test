@@ -1,51 +1,44 @@
 {
   "name": "fitts-law-test",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/CRChenND/fitts-law-test.git"
+  "private": true,
+  "engines": {
+    "node": "^24.15.0"
   },
-  "contributors": [],
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "npm run build && npm run server",
+    "dev": "concurrently --kill-others --names api,web \"npm:server\" \"npm:client\"",
+    "client": "ng serve --proxy-config proxy.conf.json",
+    "server": "node server/index.mjs",
     "build": "ng build",
-    "build:pages": "ng build --prod --base-href /fitts-law-test/ --output-path docs",
-    "lint": "ng lint fitts-law-test"
+    "test": "ng test --watch=false",
+    "test:server": "node --test server/*.test.mjs"
   },
-  "pre-commit": [],
-  "private": true,
   "dependencies": {
-    "@angular/animations": "7.1.4",
-    "@angular/common": "7.1.4",
-    "@angular/compiler": "7.1.4",
-    "@angular/core": "7.1.4",
-    "@angular/forms": "7.1.4",
-    "@angular/platform-browser": "7.1.4",
-    "@angular/platform-browser-dynamic": "7.1.4",
-    "@angular/router": "7.1.4",
-    "classlist.js": "^1.1.20150312",
-    "core-js": "^2.4.1",
-    "d3": "^5.7.0",
-    "file-saver": "^2.0.0",
-    "lodash": "^4.17.11",
-    "reflect-metadata": "^0.1.10",
-    "rxjs": "6.3.3",
-    "zone.js": "^0.8.26"
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/platform-browser-dynamic": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "d3": "^7.9.0",
+    "express": "^5.1.0",
+    "lodash-es": "^4.17.21",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "0.11.4",
-    "@angular/cli": "7.1.4",
-    "@angular/compiler-cli": "7.1.4",
-    "@angular/language-service": "7.1.4",
-    "@types/d3": "^5.7.0",
-    "@types/lodash": "^4.14.119",
-    "@types/node": "^8.0.30",
-    "codelyzer": "^4.0.2",
-    "pre-commit": "^1.2.2",
-    "ts-loader": "^4.2.0",
-    "tslint": "^5.7.0",
-    "typescript": "3.1.6"
+    "@angular/build": "^22.0.0",
+    "@angular/cli": "^22.0.0",
+    "@angular/compiler-cli": "^22.0.0",
+    "@types/d3": "^7.4.3",
+    "@types/lodash-es": "^4.17.12",
+    "concurrently": "^9.2.1",
+    "jsdom": "^30.0.1",
+    "typescript": "~6.0.0",
+    "vitest": "^4.1.11"
   }
 }

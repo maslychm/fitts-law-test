@@ -52,3 +52,5 @@
 .fitt-circle {
     transition: fill 0.3s ease-out 0s;
 }
+.save-status { margin: 15px 0 0; color: #287a3a; text-align: center; }
+.save-status.error { color: #b42318; }

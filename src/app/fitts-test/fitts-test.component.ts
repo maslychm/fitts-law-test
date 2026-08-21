@@ -1,11 +1,9 @@
-import { Component, OnInit, AfterViewInit, HostListener } from '@angular/core';
+import { AfterViewInit, Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import * as d3 from 'd3';
-import * as _ from 'lodash';
+import * as _ from 'lodash-es';
 import { AppService } from '../app.service';
 declare var DocumentTouch: any;
-
-const WRITE_RUNS_TO_STORAGE = true;
-const WRITE_TO_STORAGE = true;
 
 export class Coordinate {
     x = 0;
@@ -89,6 +87,14 @@ export enum Clock {
     antiClockwise = 'Anti-Clockwise'
 }
 
+export type TestScreen =
+    'practice-intro' |
+    'countdown' |
+    'running' |
+    'run-complete' |
+    'run-intro' |
+    'session-complete';
+
 export class Config {
     radiusCM;
     distanceCM;
@@ -97,11 +103,12 @@ export class Config {
 }
 
 @Component({
+    standalone: false,
     selector: 'app-fitts-test',
     templateUrl: './fitts-test.component.html',
     styleUrls: ['./fitts-test.component.scss']
 })
-export class FittsTestComponent implements AfterViewInit, OnInit {
+export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     title = 'fitts-law-tester';
     workAreaId = 'work-area' + Math.floor(Math.random() * 10e6);
     svgAreaId = 'svg-work-area' + Math.floor(Math.random() * 10e6);
@@ -125,22 +132,19 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
     dir = 1;
     clickCounter = 0;
     isPracticeRun = true;
-    showPracticeModal = true;
-    showCountdownModal = false;
-    showTestCompleteModal = false;
-    showActualTestModal = false;
-    showAllDoneModal = false;
-    showModal = true;
+    screen = signal<TestScreen>('practice-intro');
     isMobile = false;
     currentPerformanceTick = null;
     currentDataSet: Array<DataItem | any> = [];
+    practiceDataSet: Array<DataItem | any> = [];
     overallDataSet: Array<DataItem | any> = [];
     overallAverages: Array<DataAverage | any> = [];
     countdownTickCount = -1;
     currentTestCount = -1;
     maxTicks = 3;
-    countdownTick = this.maxTicks;
-    listener = null;
+    countdownTick = signal(this.maxTicks);
+    countdownInterval: number | null = null;
+    usesTouchEvents = false;
     userInfo = null;
     desktopCircleRadiusMeta = [0.25, 1];
     desktopDimensionsMeta = [8, 10];
@@ -168,22 +172,26 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
     ];
     runConfigurations: Array<Config> = [];
     defaultPraticeIndex = 7;
-    constructor(private appService: AppService) { }
+    sessionType: 'formal' | 'demo' = 'formal';
+    sessionStartedAt = '';
+    saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    saveMessage = signal('');
+    constructor(
+        private appService: AppService,
+        private route: ActivatedRoute
+    ) { }
     ngAfterViewInit() {
         this.dim = this.getSquareDimension();
         this.maxRadius = this.dim / 6;
         this.minRadius = this.getMinRadius();
         this.processCurrentRadius();
         this.checkDimensions();
-        const supported = this.checkTouchSupport();
-        if (supported) {
-            document.addEventListener('touchstart', this.listener);
-        } else {
-            document.addEventListener('click', this.listener);
-        }
     }
     ngOnInit() {
+        this.sessionStartedAt = new Date().toISOString();
+        this.sessionType = this.route.snapshot.data['sessionType'] === 'demo' ? 'demo' : 'formal';
         this.isMobile = this.appService.isMobile();
+        this.usesTouchEvents = this.checkTouchSupport();
         if (this.isMobile) {
             this.runConfigurations = this.phoneConfigs.map(x => {
                 return {
@@ -203,39 +211,57 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
                 };
             });
         }
-        if (this.appService.debugModeTurns) {
+        if (this.sessionType === 'demo') {
+            this.maxTests = 1;
+        } else if (this.appService.debugModeTurns) {
             this.maxTests = this.appService.debugModeTurns;
         } else {
             this.maxTests = this.runConfigurations.length;
         }
         this.userInfo = this.appService.info;
-        this.listener = (e: any) => {
-            const now = performance.now();
-            const dir = this.dir;
-            if (this.testInProgress) {
-                const lastCircleIndex = this.currentIndexActive;
-                let correctClick = false;
-                const elem = e.target as HTMLElement;
-                if (elem.classList.contains('fitt-circle') && elem.classList.contains('active')) {
-                    correctClick = true;
-                    if (this.dir === 1 && (this.currentIndexActive + this.dir) > this.fittCircles.length - 1) {
-                        this.dir = -1;
-                        this.currentIndexActive += this.dir;
-                    } else if (this.dir === -1 && (this.currentIndexActive + this.dir) < 0) {
-                        this.dir = 1;
-                        this.currentIndexActive += this.dir;
-                    } else {
-                        this.currentIndexActive += this.dir;
-                    }
-                    this.activateCircle(this.currentIndexActive);
-                    this.clickCounter += 1;
-                } else {
-                    this.highlightCurrentCircleAsIncorrect();
-                }
-                this.processClick(correctClick, lastCircleIndex, now, dir);
-                this.checkForTestSession();
+    }
+    ngOnDestroy() {
+        this.clearCountdown();
+    }
+    @HostListener('document:click', ['$event'])
+    onDocumentClick(event: MouseEvent) {
+        if (!this.usesTouchEvents) {
+            this.processPointerEvent(event);
+        }
+    }
+    @HostListener('document:touchstart', ['$event'])
+    onDocumentTouchStart(event: TouchEvent) {
+        if (this.usesTouchEvents) {
+            this.processPointerEvent(event);
+        }
+    }
+    private processPointerEvent(event: Event) {
+        if (!this.testInProgress) {
+            return;
+        }
+        const now = performance.now();
+        const dir = this.dir;
+        const lastCircleIndex = this.currentIndexActive;
+        let correctClick = false;
+        const elem = event.target;
+        if (elem instanceof Element && elem.classList.contains('fitt-circle') && elem.classList.contains('active')) {
+            correctClick = true;
+            if (this.dir === 1 && (this.currentIndexActive + this.dir) > this.fittCircles.length - 1) {
+                this.dir = -1;
+                this.currentIndexActive += this.dir;
+            } else if (this.dir === -1 && (this.currentIndexActive + this.dir) < 0) {
+                this.dir = 1;
+                this.currentIndexActive += this.dir;
+            } else {
+                this.currentIndexActive += this.dir;
             }
-        };
+            this.activateCircle(this.currentIndexActive);
+            this.clickCounter += 1;
+        } else {
+            this.highlightCurrentCircleAsIncorrect();
+        }
+        this.processClick(correctClick, lastCircleIndex, now, dir);
+        this.checkForTestSession();
     }
     checkTouchSupport() {
         if (('ontouchstart' in window) || (window as any).DocumentTouch && document instanceof DocumentTouch) {
@@ -245,21 +271,12 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
     }
     beginPractice() {
         this.isPracticeRun = true;
-        this.showPracticeModal = false;
-        this.showCountdownModal = true;
-        this.countdownTick = this.maxTicks;
+        this.screen.set('countdown');
+        this.countdownTick.set(this.maxTicks);
         this.pickRadius();
         this.layoutCurrentRadiusBox();
         this.layourtCurrentCircles();
-        const interval = setInterval(() => {
-            this.countdownTick = this.countdownTick - 1;
-            if (this.countdownTick === 0) {
-                clearInterval(interval);
-                this.showCountdownModal = false;
-                this.showModal = false;
-                this.setupClickTest();
-            }
-        }, 1000);
+        this.startCountdown();
     }
     processCurrentRadius() {
         this.pickRadius();
@@ -287,20 +304,28 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
     }
     startTest() {
         this.isPracticeRun = false;
-        this.showActualTestModal = false;
-        this.showCountdownModal = true;
-        this.countdownTick = this.maxTicks;
+        this.screen.set('countdown');
+        this.countdownTick.set(this.maxTicks);
         this.processCurrentRadius();
         this.checkDimensions();
-        const interval = setInterval(() => {
-            this.countdownTick = this.countdownTick - 1;
-            if (this.countdownTick === 0) {
-                clearInterval(interval);
-                this.showCountdownModal = false;
-                this.showModal = false;
+        this.startCountdown();
+    }
+    private startCountdown() {
+        this.clearCountdown();
+        this.countdownInterval = window.setInterval(() => {
+            this.countdownTick.update(tick => tick - 1);
+            if (this.countdownTick() <= 0) {
+                this.clearCountdown();
+                this.screen.set('running');
                 this.setupClickTest();
             }
         }, 1000);
+    }
+    private clearCountdown() {
+        if (this.countdownInterval !== null) {
+            window.clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
     }
     checkDimensions() {
         let works = true;
@@ -387,9 +412,10 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
         this.activateCircle(this.currentIndexActive);
         this.currentIndexActive = null;
         this.currentPerformanceTick = null;
-        this.showModal = true;
-        this.showTestCompleteModal = true;
-        if (!this.isPracticeRun) {
+        this.screen.set('run-complete');
+        if (this.isPracticeRun) {
+            this.practiceDataSet = this.currentDataSet.slice();
+        } else {
             this.calculateCurrentAverage();
             this.overallDataSet = this.overallDataSet.concat(this.currentDataSet);
         }
@@ -511,7 +537,6 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
         return averageObj;
     }
     nextStepInTest() {
-        this.showTestCompleteModal = false;
         if (this.isPracticeRun) {
             this.isPracticeRun = false;
             this.currentTestCount = 1;
@@ -519,35 +544,16 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
             this.currentTestCount += 1;
         }
         if (this.currentTestCount <= this.maxTests) {
-            this.showActualTestModal = true;
+            this.screen.set('run-intro');
         } else {
-            const clickData = this.getSheetTransform(this.overallDataSet);
-            const runAverages = this.getSheetTransform(this.overallAverages);
             const average = this.calculateOverallUserAverage();
-            const userAverage = this.getSheetTransform([average]);
             this.appService.currentDataSet = this.overallDataSet;
+            this.appService.practiceDataSet = this.practiceDataSet;
             this.appService.runAverages = this.overallAverages;
             this.appService.userAverage = average;
-            if (WRITE_TO_STORAGE) {
-                this.appService.appendRunAveragesRowsToGoogleSheets(runAverages);
-                this.appService.appendUserAveragesRowsToGoogleSheets(userAverage);
-                if (WRITE_RUNS_TO_STORAGE) {
-                    this.appService.appendRowsToGoogleSheets(clickData);
-                }
-            }
-            this.showAllDoneModal = true;
+            this.persistSession(average);
+            this.screen.set('session-complete');
         }
-    }
-    getSheetTransform(data) {
-        const temp = [];
-        if (data && data.length > 0) {
-            const keys = Object.keys(data[0]);
-            data.forEach(d => {
-                const values = keys.map(k => d[k]);
-                temp.push(values);
-            });
-        }
-        return temp;
     }
     checkForTestSession() {
         if (this.clickCounter > 14) {
@@ -597,7 +603,8 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
             timestamp: `${dt.toDateString()} ${dt.getHours()}:${dt.getMinutes()}:${dt.getSeconds()}:${dt.getMilliseconds()}`,
             run: `RUN #${this.currentTestCount}`,
             radius: radius * 2,
-            distance: distance
+            distance: distance,
+            phase: this.isPracticeRun ? 'practice' : this.sessionType
         });
         this.currentDataSet.push(item);
         if (isCorrectClick) {
@@ -652,11 +659,34 @@ export class FittsTestComponent implements AfterViewInit, OnInit {
     }
     downloadData() {
         this.appService.currentDataSet = this.overallDataSet;
+        this.appService.practiceDataSet = this.practiceDataSet;
         this.appService.downloadData();
     }
     downloadCSVData() {
         this.appService.currentDataSet = this.overallDataSet;
+        this.appService.practiceDataSet = this.practiceDataSet;
         this.appService.downloadCSVData();
+    }
+
+    persistSession(average) {
+        const session = this.appService.createSession(
+            this.sessionType,
+            this.sessionStartedAt,
+            this.userInfo,
+            this.practiceDataSet,
+            this.overallDataSet,
+            this.overallAverages,
+            average
+        );
+        this.saveStatus.set('saving');
+        this.saveMessage.set('Saving this session locally...');
+        this.appService.saveSession(session).then(() => {
+            this.saveStatus.set('saved');
+            this.saveMessage.set('Session saved to the local results file.');
+        }).catch(() => {
+            this.saveStatus.set('error');
+            this.saveMessage.set('Local save failed. Your results are still available for download.');
+        });
     }
 }
 

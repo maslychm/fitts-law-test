@@ -42,6 +42,12 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Local experiment results and Angular build output
+/data/
+/dist/
+/.tools/
+/.angular/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

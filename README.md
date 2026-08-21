@@ -136,6 +136,11 @@ npm run build
 
 Before collecting real data, complete one demo session in the browser after building the application.
 
+## TODO
+
+- Replace the `mobile-detect` CDN dependency with browser capability detection while preserving the intended desktop, phone, and tablet test configurations.
+- Replace the full D3 dependency with native SVG DOM APIs or the narrower `d3-selection` package.
+
 ## Operational Checklist
 
 1. Confirm Node 24.15.0 or newer in the Node 24 release line.

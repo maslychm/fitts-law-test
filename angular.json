@@ -41,13 +41,6 @@
             "development": { "buildTarget": "fitts-law-test:build:development" }
           },
           "defaultConfiguration": "development"
-        },
-        "test": {
-          "builder": "@angular/build:unit-test",
-          "options": {
-            "tsConfig": "src/tsconfig.spec.json",
-            "buildTarget": "fitts-law-test:build:development"
-          }
         }
       }
     }

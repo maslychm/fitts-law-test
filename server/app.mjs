@@ -36,6 +36,10 @@ export function createApp(options = {}) {
   app.use(express.static(frontendDir));
   app.use((request, response, next) => {
     if (request.method === 'GET' && !request.path.startsWith('/api/')) {
+      if (request.path !== '/') {
+        response.redirect('/');
+        return;
+      }
       response.sendFile(path.join(frontendDir, 'index.html'));
       return;
     }

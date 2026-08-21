@@ -1,5 +1,4 @@
-import { AfterViewInit, Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { AfterViewInit, Component, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, signal } from '@angular/core';
 import * as d3 from 'd3';
 import * as _ from 'lodash-es';
 import { AppService } from '../app.service';
@@ -109,6 +108,8 @@ export class Config {
     styleUrls: ['./fitts-test.component.scss']
 })
 export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
+    @Input() sessionType: 'formal' | 'demo' = 'formal';
+    @Output() viewResults = new EventEmitter<void>();
     title = 'fitts-law-tester';
     workAreaId = 'work-area' + Math.floor(Math.random() * 10e6);
     svgAreaId = 'svg-work-area' + Math.floor(Math.random() * 10e6);
@@ -172,14 +173,10 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     ];
     runConfigurations: Array<Config> = [];
     defaultPraticeIndex = 7;
-    sessionType: 'formal' | 'demo' = 'formal';
     sessionStartedAt = '';
     saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
     saveMessage = signal('');
-    constructor(
-        private appService: AppService,
-        private route: ActivatedRoute
-    ) { }
+    constructor(private appService: AppService) { }
     ngAfterViewInit() {
         this.dim = this.getSquareDimension();
         this.maxRadius = this.dim / 6;
@@ -189,7 +186,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     }
     ngOnInit() {
         this.sessionStartedAt = new Date().toISOString();
-        this.sessionType = this.route.snapshot.data['sessionType'] === 'demo' ? 'demo' : 'formal';
         this.isMobile = this.appService.isMobile();
         this.usesTouchEvents = this.checkTouchSupport();
         if (this.isMobile) {
@@ -213,8 +209,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         }
         if (this.sessionType === 'demo') {
             this.maxTests = 1;
-        } else if (this.appService.debugModeTurns) {
-            this.maxTests = this.appService.debugModeTurns;
         } else {
             this.maxTests = this.runConfigurations.length;
         }

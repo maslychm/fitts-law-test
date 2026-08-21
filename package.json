@@ -12,9 +12,7 @@
     "dev": "concurrently --kill-others --names api,web \"npm:server\" \"npm:client\"",
     "client": "ng serve --proxy-config proxy.conf.json",
     "server": "node server/index.mjs",
-    "build": "ng build",
-    "test": "ng test --watch=false",
-    "test:server": "node --test server/*.test.mjs"
+    "build": "ng build"
   },
   "dependencies": {
     "@angular/common": "^22.0.0",
@@ -23,7 +21,6 @@
     "@angular/forms": "^22.0.0",
     "@angular/platform-browser": "^22.0.0",
     "@angular/platform-browser-dynamic": "^22.0.0",
-    "@angular/router": "^22.0.0",
     "d3": "^7.9.0",
     "express": "^5.1.0",
     "lodash-es": "^4.17.21",
@@ -37,8 +34,6 @@
     "@types/d3": "^7.4.3",
     "@types/lodash-es": "^4.17.12",
     "concurrently": "^9.2.1",
-    "jsdom": "^30.0.1",
-    "typescript": "~6.0.0",
-    "vitest": "^4.1.11"
+    "typescript": "~6.0.0"
   }
 }

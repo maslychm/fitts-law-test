@@ -9,7 +9,6 @@ export class AppService {
     md = null;
     runAverages = [];
     userAverage = {};
-    debugModeTurns = null;
     dpi = null;
     currentDataSet = [];
     practiceDataSet = [];

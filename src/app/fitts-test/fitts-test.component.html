@@ -34,7 +34,7 @@
         <div class="practice-run-modal">
             <h2>Thanks for taking the test !</h2>
             <p class="save-status" [class.error]="saveStatus() === 'error'" aria-live="polite">{{saveMessage()}}</p>
-            <button class="btn-main primary" target="_blank" [routerLink]="['/results']">View Summary</button>
+            <button class="btn-main primary" (click)="viewResults.emit()">View Summary</button>
             <button class="btn-main" *ngIf="!isMobile" (click)="downloadData()">Download JSON Data</button>
             <button class="btn-main" (click)="downloadCSVData()">Download CSV Data</button>
         </div>

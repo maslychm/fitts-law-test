@@ -11,5 +11,5 @@
         <br>
         At the end, you can display your results and download them in JSON or CSV format. The local application also saves one complete record for each finished formal or demo session.
     </p>
-    <button class="btn-main primary" [routerLink]="['/info']">Next</button>
+    <button class="btn-main primary" (click)="continue.emit()">Next</button>
 </div>

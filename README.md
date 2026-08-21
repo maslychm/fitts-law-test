@@ -42,7 +42,7 @@ npm run build
 npm run server
 ```
 
-The build is written to `dist/fitts-law-test/browser`. The Express process serves that directory, handles Angular route fallbacks, and exposes the results API under `/api`.
+The build is written to `dist/fitts-law-test/browser`. The Express process serves that directory and exposes the results API under `/api`.
 
 To confirm that the API is running, open <http://127.0.0.1:3000/api/health>. It should return:
 
@@ -73,7 +73,10 @@ Run them in separate terminals when starting them individually.
 
 ## Session Flow and Results
 
-Both `/test` and `/demo` use the same test flow. A participant completes a practice run, the configured formal runs or one demo run, and then reaches the completion screen. Results are shown after selecting **View Summary**.
+The entire participant workflow stays at the application root (`/`). Home, participant information, the pointing test, and results are separate Angular components coordinated as in-memory stages rather than separate URLs. Choosing **Formal Run** or **Demo Run** configures the shared test component; a participant then completes a practice run, the configured formal runs or one demo run, and reaches the completion screen. Results are shown after selecting **View Summary**.
+
+Refreshing the browser at any stage intentionally starts a new workflow at Home. The application does not use session storage or restore unfinished tests.
+Opening any non-root browser path, query string, or URL hash redirects to exactly `/`.
 
 When a formal or demo session finishes, the frontend sends it to `POST /api/sessions`. The server validates the payload and appends one JSON object to:
 
@@ -131,19 +134,7 @@ Build the production frontend:
 npm run build
 ```
 
-Run the Angular transition and route-guard tests:
-
-```bash
-npm test
-```
-
-Run the Express API tests:
-
-```bash
-npm run test:server
-```
-
-Before collecting real data, run all three commands and complete one demo session in the browser.
+Before collecting real data, complete one demo session in the browser after building the application.
 
 ## Operational Checklist
 

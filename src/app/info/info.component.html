@@ -2,13 +2,13 @@
     <h1>Please fill in the following details</h1>
     <form #infoForm="ngForm" style="padding-bottom: 0;">
         <div class="form-group">
-            <label for="namde">Your Name</label>
-            <input required type="text" name="name" [(ngModel)]="info.name" class="form-control" id="namde" placeholder="Enter Name">
+            <label for="name">Your Name</label>
+            <input required type="text" name="name" [(ngModel)]="info.name" class="form-control" id="name" placeholder="Enter Name">
         </div>
         <div class="form-group">
-            <label for="andrewId">Your Andrew ID</label>
-            <input required type="email" name="alias" [(ngModel)]="info.alias" class="form-control" id="andrewId"
-                placeholder="Enter ANDREW ID">
+            <label for="participantId">Participant ID</label>
+            <input required type="text" name="participantId" [(ngModel)]="info.participantId" class="form-control" id="participantId"
+                placeholder="Enter Participant ID">
         </div>
         <div class="form-group">
             <label for="type">Participant Type</label>
@@ -25,7 +25,7 @@
         </div>
         <div class="form-group" >
             <label for="deviceDetails">Device Details</label>
-            <input required type="email" name="alias" [(ngModel)]="info.deviceDetails" class="form-control" id="deviceDetails"
+            <input required type="text" name="deviceDetails" [(ngModel)]="info.deviceDetails" class="form-control" id="deviceDetails"
                 placeholder="Enter Details">
             <small id="emailHelp" class="form-text text-muted">Add some more details for this device type like make, model, size etc.</small>
         </div>

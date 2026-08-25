@@ -42,7 +42,7 @@ export class AppService {
 
     downloadSummaryCsv() {
         const csv = createSummaryCsv(this.info || {}, this.runAverages || [], this.userAverage || {});
-        this.saveBlob(csv, `${this.info.alias}-summary.csv`, 'text/csv;charset=utf-8');
+        this.saveBlob(csv, `${this.info.participantId}-summary.csv`, 'text/csv;charset=utf-8');
     }
 
     private saveBlob(contents: string, filename: string, type: string) {

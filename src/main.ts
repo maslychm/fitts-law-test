@@ -9,8 +9,10 @@ if (environment.production) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.location.pathname !== '/' || window.location.search || window.location.hash) {
-    window.location.replace('/');
+  const configuredBasePath = new URL(document.baseURI).pathname;
+  const basePath = configuredBasePath.endsWith('/') ? configuredBasePath : `${configuredBasePath}/`;
+  if (window.location.pathname !== basePath || window.location.search || window.location.hash) {
+    window.location.replace(basePath);
     return;
   }
   platformBrowserDynamic().bootstrapModule(AppModule);

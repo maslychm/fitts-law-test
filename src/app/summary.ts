@@ -13,7 +13,7 @@ interface SummaryColumn {
 
 export const PARTICIPANT_COLUMNS: SummaryColumn[] = [
     { key: 'name', displayLabel: 'Name', csvHeader: 'Participant Name' },
-    { key: 'alias', displayLabel: 'Andrew ID', csvHeader: 'Andrew ID' },
+    { key: 'participantId', displayLabel: 'Participant ID', csvHeader: 'Participant ID' },
     { key: 'type', displayLabel: 'Participant Type', csvHeader: 'Participant Type' },
     { key: 'device', displayLabel: 'Device', csvHeader: 'Device' },
     { key: 'deviceDetails', displayLabel: 'Device Details', csvHeader: 'Device Details' },

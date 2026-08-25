@@ -33,7 +33,7 @@ export class InfoComponent {
     ];
     info = {
         name: '',
-        alias: '',
+        participantId: '',
         type: '',
         device: '',
         deviceDetails: '',

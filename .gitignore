@@ -42,8 +42,7 @@ build/Release
 node_modules/
 jspm_packages/
 
-# Local experiment results and Angular build output
-/data/
+# Angular build output
 /dist/
 /.tools/
 /.angular/

@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { AppService } from '../app.service';
-import { SessionType } from '../session-result';
+import { SessionType } from '../session-type';
 
 @Component({
   standalone: false,

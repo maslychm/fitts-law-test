@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { SessionType } from './session-result';
+import { SessionType } from './session-type';
 
 export type WorkflowStage = 'home' | 'info' | 'test' | 'results';
 

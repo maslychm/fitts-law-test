@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, signal } from '@angular/core';
 import * as d3 from 'd3';
 import { AppService } from '../app.service';
+import { SessionType } from '../session-type';
 declare var DocumentTouch: any;
 
 export class Coordinate {
@@ -113,7 +114,7 @@ export class Config {
     styleUrls: ['./fitts-test.component.scss']
 })
 export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
-    @Input() sessionType: 'formal' | 'demo' = 'formal';
+    @Input() sessionType: SessionType = 'formal';
     @Output() viewResults = new EventEmitter<void>();
     workAreaId = 'work-area' + Math.floor(Math.random() * 10e6);
     svgAreaId = 'svg-work-area' + Math.floor(Math.random() * 10e6);
@@ -133,7 +134,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     isMobile = false;
     currentPerformanceTick = null;
     currentDataSet: Array<DataItem | any> = [];
-    practiceDataSet: Array<DataItem | any> = [];
     overallDataSet: Array<DataItem | any> = [];
     overallAverages: Array<DataAverage | any> = [];
     currentTestCount = -1;
@@ -158,9 +158,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     ];
     runConfigurations: Array<Config> = [];
     defaultPraticeIndex = 7;
-    sessionStartedAt = '';
-    saveStatus = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
-    saveMessage = signal('');
     constructor(private appService: AppService) { }
     ngAfterViewInit() {
         this.dim = this.getSquareDimension();
@@ -168,7 +165,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         this.checkDimensions();
     }
     ngOnInit() {
-        this.sessionStartedAt = new Date().toISOString();
         this.isMobile = this.appService.isMobile();
         this.usesTouchEvents = this.checkTouchSupport();
         if (this.isMobile) {
@@ -365,9 +361,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         this.currentIndexActive = null;
         this.currentPerformanceTick = null;
         this.screen.set('run-complete');
-        if (this.isPracticeRun) {
-            this.practiceDataSet = this.currentDataSet.slice();
-        } else {
+        if (!this.isPracticeRun) {
             this.calculateCurrentAverage();
             this.overallDataSet = this.overallDataSet.concat(this.currentDataSet);
         }
@@ -407,7 +401,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         average.horizontalMissPercentage = (horizontalMisses.length / (horizontalHits.length + horizontalMisses.length)) * 100;
         average.otherDirectionHitPercentage = (otherHits.length / (otherHits.length + otherMisses.length)) * 100;
         average.otherDirectionMissPercentage = (otherMisses.length / (otherHits.length + otherMisses.length)) * 100;
-        const averageObj = Object.assign({}, this.userInfo, {
+        const averageObj = {
             run: average.run,
             radius: average.radius,
             distance: average.distance,
@@ -431,7 +425,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
             horizontalMissPercentage: average.horizontalMissPercentage,
             otherDirectionHitPercentage: average.otherDirectionHitPercentage,
             otherDirectionMissPercentage: average.otherDirectionMissPercentage
-        });
+        };
         this.overallAverages.push(averageObj);
     }
     calculateOverallUserAverage() {
@@ -464,7 +458,7 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
         average.horizontalMissPercentage = (horizontalMisses.length / (horizontalHits.length + horizontalMisses.length)) * 100;
         average.otherDirectionHitPercentage = (otherHits.length / (otherHits.length + otherMisses.length)) * 100;
         average.otherDirectionMissPercentage = (otherMisses.length / (otherHits.length + otherMisses.length)) * 100;
-        const averageObj = Object.assign({}, this.userInfo, {
+        const averageObj = {
             averageTicks: average.averageTicks,
             averageVerticalTicks: average.averageVerticalTicks,
             averageHorizontalTicks: average.averageHorizontalTicks,
@@ -479,13 +473,13 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
             otherMisses: average.otherMisses,
             hitPercentage: average.hitPercentage,
             missPercentage: average.missPercentage,
-            verticalHitPecentage: average.verticalHitPercentage,
-            verticalMissPecentage: average.verticalMissPercentage,
-            horizontalHitPecentage: average.horizontalHitPercentage,
-            horizontalMissPecentage: average.horizontalMissPercentage,
-            otherDirectionHitPecentage: average.otherDirectionHitPercentage,
-            otherDirectionMissPecentage: average.otherDirectionMissPercentage
-        });
+            verticalHitPercentage: average.verticalHitPercentage,
+            verticalMissPercentage: average.verticalMissPercentage,
+            horizontalHitPercentage: average.horizontalHitPercentage,
+            horizontalMissPercentage: average.horizontalMissPercentage,
+            otherDirectionHitPercentage: average.otherDirectionHitPercentage,
+            otherDirectionMissPercentage: average.otherDirectionMissPercentage
+        };
         return averageObj;
     }
     nextStepInTest() {
@@ -499,11 +493,8 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
             this.screen.set('run-intro');
         } else {
             const average = this.calculateOverallUserAverage();
-            this.appService.currentDataSet = this.overallDataSet;
-            this.appService.practiceDataSet = this.practiceDataSet;
             this.appService.runAverages = this.overallAverages;
             this.appService.userAverage = average;
-            this.persistSession(average);
             this.screen.set('session-complete');
         }
     }
@@ -600,37 +591,6 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     }
     toRadians(angle) {
         return angle * (Math.PI / 180);
-    }
-    downloadData() {
-        this.appService.currentDataSet = this.overallDataSet;
-        this.appService.practiceDataSet = this.practiceDataSet;
-        this.appService.downloadData();
-    }
-    downloadCSVData() {
-        this.appService.currentDataSet = this.overallDataSet;
-        this.appService.practiceDataSet = this.practiceDataSet;
-        this.appService.downloadCSVData();
-    }
-
-    persistSession(average) {
-        const session = this.appService.createSession(
-            this.sessionType,
-            this.sessionStartedAt,
-            this.userInfo,
-            this.practiceDataSet,
-            this.overallDataSet,
-            this.overallAverages,
-            average
-        );
-        this.saveStatus.set('saving');
-        this.saveMessage.set('Saving this session locally...');
-        this.appService.saveSession(session).then(() => {
-            this.saveStatus.set('saved');
-            this.saveMessage.set('Session saved to the local results file.');
-        }).catch(() => {
-            this.saveStatus.set('error');
-            this.saveMessage.set('Local save failed. Your results are still available for download.');
-        });
     }
 }
 

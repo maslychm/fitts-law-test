@@ -1,14 +1,14 @@
 # Fitts Law Test
 
-A browser-based Fitts' law pointing task for formal and demo sessions. The Angular frontend runs the task, the local Express server stores completed sessions in JSON Lines format, and participants can download their latest results as JSON or CSV.
+A frontend-only Angular single-page application for running formal and demo Fitts' law pointing tasks. All participant details and results stay in browser memory. The application has no API, database, server-side storage, or session recovery.
 
 ## Requirements
 
 - Node.js 24.15.0 or newer in the Node 24 release line. The required version is recorded in `.nvmrc` and `package.json`.
 - npm, included with Node.js.
-- Internet access for the initial dependency install. While the app is running, it also loads Bootstrap, Open Sans, and mobile-device detection from public CDNs.
+- Internet access for the initial dependency install. While running, the page also loads Bootstrap, Open Sans, and mobile-device detection from public CDNs.
 
-Check the active versions before installing:
+Check the active versions:
 
 ```bash
 node --version
@@ -17,137 +17,77 @@ npm --version
 
 ## Install
 
-For a fresh checkout, install the exact versions in `package-lock.json`:
+Install the exact dependency versions recorded in `package-lock.json`:
 
 ```bash
 npm ci
 ```
 
-Use `npm install` instead when intentionally adding or updating dependencies.
+Use `npm install` only when intentionally adding or updating dependencies.
 
-## Start the Application
+## Run Locally
 
-Build the production Angular bundle and start the Express server:
+Start the Angular development server:
 
 ```bash
 npm start
 ```
 
-Open <http://127.0.0.1:3000>. Keep the terminal running for the duration of the experiment and stop it with `Ctrl+C`.
+Open <http://localhost:4200>. Stop the development server with `Ctrl+C`.
 
-`npm start` performs these two commands in order:
+There is no separate backend process and no second application port.
+
+## Workflow and Results
+
+The entire workflow stays at `/`. Home, participant information, the pointing task, completion, and Summary are in-memory stages of one Angular application.
+
+A participant completes a practice run followed by either:
+
+- One demo run, or
+- The complete configured set of formal runs.
+
+The completion screen links to Summary. Summary displays participant information, averages across all runs, and metrics for each actual run.
+
+Refreshing the browser at any point starts a new workflow at Home and discards all participant details and results. The application does not use cookies, local storage, session storage, IndexedDB, an API, or a database.
+
+### Summary CSV
+
+**Download Summary CSV** is the application's only data export. It is available only on Summary and creates `<andrew-id>-summary.csv`.
+
+The CSV contains one consistent header, one row for each actual demo or formal run, and a final `OVERALL` row. Participant and overall context is repeated as appropriate. Practice activity, individual clicks, timestamps, source indices, and click directions are not exported.
+
+Headers include their units, such as `(ms)`, `(cm)`, `(in)`, `(count)`, and `(%)`; data cells remain unitless. Timing and percentage values are rounded to two decimal places. The `OVERALL` row leaves target diameter and distance blank because it combines multiple run configurations.
+
+## Build and Deploy
+
+Create the production bundle:
 
 ```bash
 npm run build
-npm run server
 ```
 
-The build is written to `dist/fitts-law-test/browser`. The Express process serves that directory and exposes the results API under `/api`.
-
-To confirm that the API is running, open <http://127.0.0.1:3000/api/health>. It should return:
-
-```json
-{"status":"ok"}
-```
-
-No Google account, OAuth credentials, spreadsheet, database, GitHub configuration, or environment file is required.
-
-## Development Mode
-
-Run the API and Angular development server together:
-
-```bash
-npm run dev
-```
-
-Open <http://localhost:4200>. Angular provides hot reload on port 4200 and proxies `/api` requests to the Express server on `127.0.0.1:3000` using `proxy.conf.json`.
-
-The individual development processes are also available:
-
-```bash
-npm run server
-npm run client
-```
-
-Run them in separate terminals when starting them individually.
-
-## Session Flow and Results
-
-The entire participant workflow stays at the application root (`/`). Home, participant information, the pointing test, and results are separate Angular components coordinated as in-memory stages rather than separate URLs. Choosing **Formal Run** or **Demo Run** configures the shared test component; a participant then completes a practice run, the configured formal runs or one demo run, and reaches the completion screen. Results are shown after selecting **View Summary**.
-
-Refreshing the browser at any stage intentionally starts a new workflow at Home. The application does not use session storage or restore unfinished tests.
-Opening any non-root browser path, query string, or URL hash redirects to exactly `/`.
-
-When a formal or demo session finishes, the frontend sends it to `POST /api/sessions`. The server validates the payload and appends one JSON object to:
+Deploy only the static files under:
 
 ```text
-data/results.jsonl
+dist/fitts-law-test/browser
 ```
 
-The `data/` directory is created automatically and ignored by Git. Each line is an independent session with participant and device information, timestamps, separately labeled practice clicks, formal or demo clicks, per-run averages, and the overall average. API request bodies are limited to 10 MB.
+Any static web host or CDN can serve the bundle. No Node.js process is required after the files have been built.
 
-Do not edit `results.jsonl` while a session is being saved. Stop the application before copying, moving, or analyzing the file. Back up this file separately when the results matter.
-
-The completion and summary screens also provide JSON and CSV downloads. If the server cannot write the results file, the UI reports the error while keeping the results in memory so they can still be downloaded during that browser session.
-
-## Deployment Model
-
-The current repository is designed for local or self-hosted collection with the Angular frontend and Express API deployed together. It is not a static-only deployment: hosting only the files under `dist/` removes automatic session persistence because `/api/sessions` is unavailable.
-
-For a production-style installation on a machine:
-
-```bash
-npm ci
-npm run build
-npm run server
-```
-
-After the build has been created, later server restarts only require `npm run server` unless the frontend source or dependencies changed.
-
-The server:
-
-- Binds to `127.0.0.1` only.
-- Uses port `3000` by default.
-- Accepts a different port through the `PORT` environment variable.
-- Resolves `data/results.jsonl` relative to the directory from which the server is started.
-
-Example port override in PowerShell:
-
-```powershell
-$env:PORT = "8080"
-npm run server
-```
-
-Example on macOS or Linux:
-
-```bash
-PORT=8080 npm run server
-```
-
-Because the host is fixed to loopback, the server is not directly reachable from other computers. If remote access is required, run a reverse proxy on the same machine and proxy to `127.0.0.1:<PORT>`. The deployment must also provide persistent storage and backups for the working directory's `data/` folder; ephemeral hosting will lose collected results.
+The application redirects non-root paths, query strings, and URL hashes to `/` once it loads. If the host should support requests such as `/anything`, configure it to serve `index.html` as the fallback document; otherwise the host may return its own 404 before Angular can perform the redirect.
 
 ## Validation
 
-Build the production frontend:
+Before collecting real data:
 
-```bash
-npm run build
-```
-
-Before collecting real data, complete one demo session in the browser after building the application.
+1. Run `npm ci`.
+2. Run `npm run build`.
+3. Run `npm start` and complete one demo session in the browser.
+4. Confirm completion offers only **View Summary**.
+5. Download the Summary CSV and verify it contains one row per run plus one final `OVERALL` row, with no raw click data.
+6. Complete a formal session and confirm all configured runs still transition correctly.
 
 ## TODO
 
 - Replace the `mobile-detect` CDN dependency with browser capability detection while preserving the intended desktop, phone, and tablet test configurations.
 - Replace the full D3 dependency with native SVG DOM APIs or the narrower `d3-selection` package.
-
-## Operational Checklist
-
-1. Confirm Node 24.15.0 or newer in the Node 24 release line.
-2. Run `npm ci` after a fresh checkout or whenever `package-lock.json` changes.
-3. Run `npm start` and verify `/api/health` before beginning a session.
-4. Enter participant and device details, including the physical screen diagonal.
-5. Keep the terminal and browser open until the completion screen confirms that the session was saved.
-6. Stop the server before copying or analyzing `data/results.jsonl`.
-
-If Google credentials previously committed to this repository are still active and belong to you, revoke them in Google Cloud. Removing credentials from the current source does not remove them from Git history.

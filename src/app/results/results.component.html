@@ -10,10 +10,9 @@
         </div>
     </div>
     <div class="result">
-        <label class="title">All Runs</label>
+        <label class="title">Export</label>
         <div class="pair-wrapper">
-            <button class="btn-main" style="margin-top: 15px; margin-right: 15px;" *ngIf="!isMobile" (click)="downloadData()">Download JSON Data</button>
-            <button class="btn-main" (click)="downloadCSVData()">Download CSV Data</button>
+            <button class="btn-main" (click)="downloadSummaryCsv()">Download Summary CSV</button>
         </div>
     </div>
     <div class="result">

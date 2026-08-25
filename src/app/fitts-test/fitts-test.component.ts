@@ -119,6 +119,8 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     workAreaId = 'work-area' + Math.floor(Math.random() * 10e6);
     svgAreaId = 'svg-work-area' + Math.floor(Math.random() * 10e6);
     currentRadius = 50;
+    // Keep antialiased circle edges inside the SVG viewport; all centers are offset equally so test geometry is unchanged.
+    readonly svgPadding = 1;
     baseRadius = null;
     svgElem;
     dim;
@@ -253,8 +255,8 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
     processCurrentRadius() {
         this.pickRadius();
         this.svgElem = document.getElementById(this.svgAreaId);
-        const width = this.dim;
-        const height = this.dim;
+        const width = this.dim + (this.svgPadding * 2);
+        const height = this.dim + (this.svgPadding * 2);
         d3.select(this.svgElem).attr('width', width);
         d3.select(this.svgElem).attr('height', height);
         this.layoutCurrentCircles();
@@ -342,7 +344,10 @@ export class FittsTestComponent implements AfterViewInit, OnDestroy, OnInit {
             new Coordinate(pageCenter.x + xIntercept, pageCenter.y + yIntercept),
             new Coordinate(pageCenter.x - xIntercept, pageCenter.y - yIntercept)
         ];
-        return circleCoordinates;
+        return circleCoordinates.map(coordinate => new Coordinate(
+            coordinate.x + this.svgPadding,
+            coordinate.y + this.svgPadding
+        ));
     }
     setupClickTest() {
         this.currentDataSet = [];
